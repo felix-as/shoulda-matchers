@@ -148,6 +148,11 @@ module Shoulda
         private
 
         def attribute_matches?(subject, attribute)
+          if normalization_value_assertion_incomplete?
+            @failure_message = build_failure_message_for_incomplete_value_assertion
+            return false
+          end
+
           if normalization_value_assertion? && !normalize_attribute?(subject, attribute)
             @failure_message = build_failure_message(
               attribute,
@@ -167,6 +172,12 @@ module Shoulda
         end
 
         def attribute_does_not_match?(subject, attribute)
+          if normalization_value_assertion_incomplete?
+            @failure_message_when_negated =
+              build_failure_message_for_incomplete_value_assertion
+            return false
+          end
+
           if normalization_value_assertion? && normalize_attribute?(subject, attribute)
             @failure_message_when_negated = build_failure_message_when_negated(attribute)
             return false
@@ -185,6 +196,10 @@ module Shoulda
 
         def normalization_value_assertion?
           @from_value_set || @to_value_set
+        end
+
+        def normalization_value_assertion_incomplete?
+          @from_value_set != @to_value_set
         end
 
         def normalize_attribute?(subject, attribute)
@@ -229,6 +244,10 @@ module Shoulda
             Expected to not normalize #{attribute.inspect} with
             ‹#{expected_normalizer.inspect}› but it was configured with that callable
           ).squish
+        end
+
+        def build_failure_message_for_incomplete_value_assertion
+          'Expected normalize matcher to set both from and to values'
         end
       end
     end

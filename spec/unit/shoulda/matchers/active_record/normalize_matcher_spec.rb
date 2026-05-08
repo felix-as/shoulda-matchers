@@ -58,6 +58,21 @@ describe Shoulda::Matchers::ActiveRecord::NormalizeMatcher, type: :model do
       end
     end
 
+    context 'when matcher uses only from without to' do
+      it 'fails with a clear message' do
+        model = define_model(:User, name: :string) do
+          normalizes :name, with: DowncaseNormalizer
+        end
+
+        assertion = lambda do
+          expect(model.new).to normalize(:name).from(' Jane ')
+        end
+
+        expect(&assertion).
+          to fail_with_message('Expected normalize matcher to set both from and to values')
+      end
+    end
+
     context 'when subject does not use expected normalizer callable' do
       it 'fails' do
         model = define_model(:User, name: :string) do
