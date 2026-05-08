@@ -156,6 +156,7 @@ module Shoulda
             return false
           end
 
+          return true if expected_normalizer.nil?
           return true if expected_normalizer_matches?(subject, attribute)
 
           @failure_message = build_failure_message_for_normalizer(
@@ -171,6 +172,7 @@ module Shoulda
             return false
           end
 
+          return true if expected_normalizer.nil?
           return true unless expected_normalizer_matches?(subject, attribute)
 
           @failure_message_when_negated = build_failure_message_when_negated_for_normalizer(
@@ -190,7 +192,7 @@ module Shoulda
         end
 
         def expected_normalizer_matches?(subject, attribute)
-          expected_normalizer.nil? || normalizer_for_attribute(subject, attribute) == expected_normalizer
+          normalizer_for_attribute(subject, attribute) == expected_normalizer
         end
 
         def normalizer_for_attribute(subject, attribute)
