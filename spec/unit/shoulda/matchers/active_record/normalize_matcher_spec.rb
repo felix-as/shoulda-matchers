@@ -2,11 +2,29 @@ require 'unit_spec_helper'
 
 describe Shoulda::Matchers::ActiveRecord::NormalizeMatcher, type: :model do
   if rails_version >= 7.1
+    class DowncaseNormalizer
+      def self.call(value)
+        value.to_s.strip.downcase
+      end
+    end
+
+    class TitleizeNormalizer
+      def self.call(value)
+        value.to_s.strip.titleize
+      end
+    end
+
     describe '#description' do
       it 'returns the message including the attribute names, from value and to value' do
         matcher = normalize(:name, :email).from("jane doe\n").to('Jane Doe')
         expect(matcher.description).
           to eq('normalize name and email from ‹"jane doe\n"› to ‹"Jane Doe"›')
+      end
+
+      it 'returns the message including the callable when set' do
+        matcher = normalize(:name).with(DowncaseNormalizer)
+        expect(matcher.description).
+          to eq("normalize name with ‹#{DowncaseNormalizer.inspect}›")
       end
     end
 
@@ -27,6 +45,69 @@ describe Shoulda::Matchers::ActiveRecord::NormalizeMatcher, type: :model do
         end
 
         expect(model.new).to normalize(:email, :name).from(" XyZ\n").to('xyz')
+      end
+    end
+
+    context 'when subject uses expected normalizer callable' do
+      it 'matches' do
+        model = define_model(:User, name: :string) do
+          normalizes :name, with: DowncaseNormalizer
+        end
+
+        expect(model.new).to normalize(:name).with(DowncaseNormalizer)
+      end
+    end
+
+    context 'when matcher uses only from without to' do
+      it 'fails with a clear message' do
+        model = define_model(:User, name: :string) do
+          normalizes :name, with: DowncaseNormalizer
+        end
+
+        assertion = lambda do
+          expect(model.new).to normalize(:name).from(' Jane ')
+        end
+
+        expect(&assertion).
+          to fail_with_message('Expected normalize matcher to set both from and to values')
+      end
+    end
+
+    context 'when subject does not use expected normalizer callable' do
+      it 'fails' do
+        model = define_model(:User, name: :string) do
+          normalizes :name, with: DowncaseNormalizer
+        end
+
+        assertion = lambda do
+          expect(model.new).to normalize(:name).with(TitleizeNormalizer)
+        end
+
+        message = %(
+          Expected to normalize :name with ‹#{TitleizeNormalizer.inspect}›
+          but it was configured with ‹#{DowncaseNormalizer.inspect}›
+        ).squish
+
+        expect(&assertion).to fail_with_message(message)
+      end
+    end
+
+    context 'when negated expectation uses callable and subject uses that callable' do
+      it 'fails' do
+        model = define_model(:User, name: :string) do
+          normalizes :name, with: DowncaseNormalizer
+        end
+
+        assertion = lambda do
+          expect(model.new).not_to normalize(:name).with(DowncaseNormalizer)
+        end
+
+        message = %(
+          Expected to not normalize :name with ‹#{DowncaseNormalizer.inspect}›
+          but it was configured with that callable
+        ).squish
+
+        expect(&assertion).to fail_with_message(message)
       end
     end
 
